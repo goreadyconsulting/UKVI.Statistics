@@ -22,7 +22,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v5
@@ -32,8 +32,9 @@ jobs:
         run: |
           python -m pip install --disable-pip-version-check openpyxl==3.1.5 beautifulsoup4==4.13.4
           mkdir -p _site
-          cp index.html explore.html ui.css ui.js _site/
+          cp index.html explore.html ui.css ui.js domain-reports.js _site/
           python scripts/sync_public.py _site/public-data
+          python scripts/sync_domains.py _site/public-data
           python - <<'PY'
           import re, pathlib, json
           for name in ('index.html','explore.html'):
@@ -44,6 +45,7 @@ jobs:
           print('Sponsored published snapshot:',d['metadata']['latest_period'],len(d['rows']))
           PY
           node --check ui.js
+          node --check domain-reports.js
           for f in /tmp/index.html*.js /tmp/explore.html*.js; do node --check "$f"; done
       - name: Persist validated public snapshot for both Pages publishing paths
         run: |

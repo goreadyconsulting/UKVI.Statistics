@@ -13,3 +13,6 @@ The scheduled GitHub Pages workflow downloads the official entry clearance workb
 Daily schedule: 06:37 UTC; manual workflow dispatch is available. Validated generated files are published both as a Pages artifact and a public repository snapshot. A raw GitHub read-only fallback is used if Pages has not served the generated files yet; unchanged releases do not cause daily snapshot commits. Source: https://www.gov.uk/government/statistical-data-sets/immigration-system-statistics-data-tables
 
 The site is independent and not affiliated with the UK government. See each source for licensing and definitions.
+
+## Wider immigration reports
+The daily workflow downloads official ODS and XLSX files from each catalogue section, including linked regional and migration transparency pages. Published summary tables are plotted as individual values without inferred sums. Detailed data sheets with validated explicit date headers are partitioned by year; all non-axis categories are fixed to one published value, and ambiguous duplicate values are omitted instead of aggregated. Each source reports its own import status and has an original download link. Source-specific KPI definitions and specialist analytical models are not inferred automatically. Failed sources are marked unavailable without blocking the core Sponsored Study publication.
