@@ -1,13 +1,15 @@
 # UK Immigration Intelligence
 
-Public, independent Home Office statistics site. No sign-in is required.
+Public, independent Home Office immigration analytics. No visitor accounts.
 
-- The default homepage is the original Sponsored Study dashboard, using the existing read-only Supabase API and unchanged filter scope.
-- `explore.html` provides the 20 official catalogue sections and interactive Entry Clearance Visa analysis.
-- The daily Pages workflow retrieves the official catalogue and full detailed entry clearance workbook, verifies the expected headers and year/quarter structure, and builds year-partitioned static reporting data. An unsuccessful build does not deploy an incomplete snapshot.
-- Source links for the other statistical domains are refreshed, but domain-specific charts and full database import are not implemented yet.
-- The existing Supabase tables are not modified by the public sync. No privileged API keys or database passwords are needed or exposed. The original Sponsored Study dashboard still uses its existing dataset until parity and secure ingestion are established.
-- Raw data is downloaded from the official source during the workflow and is not committed to GitHub; generated reporting data is published in the Pages artifact.
-- Applications and outcomes measure separate events. The explorer requires a single applicant classification to avoid automatically mixing aggregate and detailed records.
+## Reports
+- Sponsored Study remains the default: Main Applicant, Sponsored study, 2020 onwards, Issued + Refused decisions. Original country/period/quarter comparisons retained, with a new shared layout, quarterly volume chart and shareable global filters.
+- Entry clearance explorer: full published dimensions, 2005 onwards, year-partitioned data, exact applicant classifications, presets, quarterly charts and filtered CSV.
+- All 20 catalogue sections: automatically discovered official links. Domain-specific interactive analytics other than entry clearance and Sponsored Study are not yet implemented.
 
-Source: https://www.gov.uk/government/statistical-data-sets/immigration-system-statistics-data-tables
+## Data
+The scheduled GitHub Pages workflow downloads the official entry clearance workbook directly, validates the raw sheets, publishes static annual partitions and a small dedicated Sponsored Study snapshot. It checks annual Sponsored Study totals against the previous dashboard for 2020–2025 (5% or 150 count tolerance, whichever is larger). Unexpected schema changes or substantial historical mismatches block the new deployment for investigation. The existing Supabase snapshot remains a read-only fallback; it is not automatically updated by this workflow. No database write credentials are required.
+
+Daily schedule: 06:37 UTC; manual workflow dispatch is available. The generated files are published as a Pages artifact, not committed to Git. Source: https://www.gov.uk/government/statistical-data-sets/immigration-system-statistics-data-tables
+
+The site is independent and not affiliated with the UK government. See each source for licensing and definitions.

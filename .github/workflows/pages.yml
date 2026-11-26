@@ -32,8 +32,19 @@ jobs:
         run: |
           python -m pip install --disable-pip-version-check openpyxl==3.1.5 beautifulsoup4==4.13.4
           mkdir -p _site
-          cp index.html explore.html _site/
+          cp index.html explore.html ui.css ui.js _site/
           python scripts/sync_public.py _site/public-data
+          python - <<'PY'
+          import re, pathlib, json
+          for name in ('index.html','explore.html'):
+              scripts=re.findall(r'<script>(.*?)</script>',pathlib.Path(name).read_text(),re.S)
+              for i,s in enumerate(scripts): pathlib.Path('/tmp/'+name+str(i)+'.js').write_text(s)
+          d=json.loads(pathlib.Path('_site/public-data/sponsored.json').read_text())
+          assert len(d['rows'])>4000 and all(r['decisions']==r['issued']+r['refused'] for r in d['rows'])
+          print('Sponsored published snapshot:',d['metadata']['latest_period'],len(d['rows']))
+          PY
+          node --check ui.js
+          for f in /tmp/index.html*.js /tmp/explore.html*.js; do node --check "$f"; done
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload validated site

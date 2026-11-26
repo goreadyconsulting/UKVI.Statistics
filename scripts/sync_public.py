@@ -93,7 +93,28 @@ def parse(path):
     for year in years:
         data=[[*key,v['applications'],v['outcomes']] for key,v in sorted(rows[year].items())]
         write('visas/'+str(year)+'.json',data)
-    return {'years':years,'latest_quarters':sorted({k[0] for k in rows[years[-1]]}),'source_rows':counts,'fields':['Quarter','Nationality','Region','Visa type group','Visa type','Visa type subgroup','Applicant type','Applications','Outcomes']}
+    sponsored=defaultdict(lambda: {'applications':0,'issued':0,'refused':0})
+    for year, group in rows.items():
+        if year<2020: continue
+        for (quarter,nationality,region,visa_group,visa_type,subgroup,applicant),v in group.items():
+            if visa_group.strip().lower()!='study' or visa_type.strip().lower()!='sponsored study' or applicant.strip().lower()!='main applicant': continue
+            dest=sponsored[(year,quarter,nationality)]
+            dest['applications']+=v['applications']
+            for outcome,n in v['outcomes'].items():
+                if outcome.lower() in ('issued','refused'): dest[outcome.lower()]+=n
+    sponsor_rows=[{'year':year,'quarter':q,'nationality':nationality,**v,'decisions':v['issued']+v['refused']} for (year,q,nationality),v in sorted(sponsored.items())]
+    # Reconcile full historical years against the original curated dashboard. Published revisions are expected.
+    baseline={2020:(215717,209827,3691),2021:(387307,375999,5415),2022:(489504,484140,5195),2023:(473839,456748,13401),2024:(413440,392832,13280),2025:(427649,405019,14709)}
+    annual=defaultdict(lambda: [0,0,0])
+    for r in sponsor_rows:
+        for i,k in enumerate(('applications','issued','refused')): annual[r['year']][i]+=r[k]
+    if not sponsor_rows or set(r['year'] for r in sponsor_rows)!=set(range(2020,years[-1]+1)): raise ValueError('Sponsored Study coverage mismatch')
+    for year,old in baseline.items():
+        new=annual[year]
+        if any(abs(a-b)>max(150,0.05*b) for a,b in zip(new,old)): raise ValueError('Sponsored Study historical reconciliation failed '+str(year)+' '+str(old)+' vs '+str(new))
+    latest=max((r['year'],r['quarter']) for r in sponsor_rows)
+    print('Sponsored Study reconciliation: ',dict(annual), 'latest',latest, 'rows',len(sponsor_rows))
+    return sponsor_rows, {'years':years,'latest_quarters':sorted({k[0] for k in rows[years[-1]]}),'source_rows':counts,'fields':['Quarter','Nationality','Region','Visa type group','Visa type','Visa type subgroup','Applicant type','Applications','Outcomes']}
 def main():
     sections=catalogue()
     visa=next(x for x in sections if x['id']=='entry-clearance-visas-granted-outside-the-uk')
@@ -108,8 +129,11 @@ def main():
                 digest.update(chunk)
                 out.write(chunk)
                 if out.tell()>200*1024*1024: raise ValueError('Workbook exceeds safety bound')
-        meta=parse(path)
+        sponsor_rows,meta=parse(path)
         meta.update({'source':src,'sha256':digest.hexdigest()})
+    now=dt.datetime.now(dt.timezone.utc).isoformat()
+    latest=max((r['year'],r['quarter']) for r in sponsor_rows)
+    write('sponsored.json',{'rows':sponsor_rows,'metadata':{'source_file':pathlib.PurePosixPath(urllib.parse.urlparse(src['url']).path).name,'source_url':src['url'],'imported_at':now,'latest_period':str(latest[0])+' '+latest[1],'sha256':meta['sha256']}})
     write('catalogue.json',{'source':URL,'checked_at':dt.datetime.now(dt.timezone.utc).isoformat(),'sections':sections,'entry_clearance':meta})
     print('Validated',meta['source_rows'],'years',meta['years'],'latest quarters',meta['latest_quarters'])
 if __name__=='__main__': main()
