@@ -10,6 +10,6 @@ Public, independent Home Office immigration analytics. No visitor accounts.
 ## Data
 The scheduled GitHub Pages workflow downloads the official entry clearance workbook directly, validates the raw sheets, publishes static annual partitions and a small dedicated Sponsored Study snapshot. It checks annual Sponsored Study totals against the previous dashboard for 2020–2025 (5% or 150 count tolerance, whichever is larger). Unexpected schema changes or substantial historical mismatches block the new deployment for investigation. The existing Supabase snapshot remains a read-only fallback; it is not automatically updated by this workflow. No database write credentials are required.
 
-Daily schedule: 06:37 UTC; manual workflow dispatch is available. The generated files are published as a Pages artifact, not committed to Git. Source: https://www.gov.uk/government/statistical-data-sets/immigration-system-statistics-data-tables
+Daily schedule: 06:37 UTC; manual workflow dispatch is available. Validated generated files are published both as a Pages artifact and a public repository snapshot. A raw GitHub read-only fallback is used if Pages has not served the generated files yet; unchanged releases do not cause daily snapshot commits. Source: https://www.gov.uk/government/statistical-data-sets/immigration-system-statistics-data-tables
 
 The site is independent and not affiliated with the UK government. See each source for licensing and definitions.

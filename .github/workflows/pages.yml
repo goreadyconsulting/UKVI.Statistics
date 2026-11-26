@@ -8,7 +8,7 @@ on:
     - cron: '37 6 * * *'
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -45,6 +45,32 @@ jobs:
           PY
           node --check ui.js
           for f in /tmp/index.html*.js /tmp/explore.html*.js; do node --check "$f"; done
+      - name: Persist validated public snapshot for both Pages publishing paths
+        run: |
+          python - <<'PY'
+          import json, pathlib, shutil
+          target=pathlib.Path('public-data')
+          staged=pathlib.Path('_site/public-data')
+          def signature(root):
+              try:
+                  d=json.loads((root/'catalogue.json').read_text())
+                  d.pop('checked_at',None)
+                  return d
+              except (FileNotFoundError, ValueError):
+                  return None
+          # Keep the validated files available in main for branch-based publishing
+          # and raw GitHub fallback. Avoid daily commits when the source is unchanged.
+          if signature(target)!=signature(staged) or not (target/'sponsored.json').exists():
+              if target.exists(): shutil.rmtree(target)
+              shutil.copytree(staged,target)
+          PY
+          git add public-data
+          if ! git diff --cached --quiet; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git commit -m 'Publish validated Home Office data snapshot'
+            git push origin HEAD:main
+          fi
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload validated site
@@ -54,3 +80,25 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+      - name: Verify public Sponsored Study snapshot
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          python - <<'PY'
+          import json, pathlib, time, urllib.request
+          local=json.loads(pathlib.Path('_site/public-data/sponsored.json').read_text())
+          url='https://goreadyconsulting.github.io/UKVI.Statistics/public-data/sponsored.json'
+          for attempt in range(8):
+              try:
+                  with urllib.request.urlopen(urllib.request.Request(url+'?v='+local['metadata']['sha256'][:16],headers={'Cache-Control':'no-cache'}),timeout=20) as response:
+                      remote=json.load(response)
+                  assert remote['metadata']['sha256']==local['metadata']['sha256']
+                  assert remote['metadata']['latest_period']==local['metadata']['latest_period']
+                  assert remote['rows']==local['rows']
+                  print('Public website verified:',remote['metadata']['latest_period'],len(remote['rows']))
+                  break
+              except Exception as e:
+                  print('Public endpoint retry',attempt+1,str(e))
+                  if attempt==7: raise
+                  time.sleep(8)
+          PY
