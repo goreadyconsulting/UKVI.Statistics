@@ -30,7 +30,12 @@ def catalogue():
     for anchor, label in GROUPS:
         heading = soup.find(id=anchor)
         if heading is None:
-            raise ValueError('Missing catalogue section: '+anchor)
+            # Publication headings can change; preserve unavailable sections as source links.
+            terms = [anchor.replace('-',' '), label.lower()]
+            heading = next((h for h in soup.find_all('h2') if any(t in h.get_text(' ',strip=True).lower() for t in terms)), None)
+        if heading is None:
+            sections.append({'id':anchor,'title':label,'url':URL+'#'+anchor,'links':[], 'notes':['This heading was not found in the latest catalogue; see the official source for the current classification.']})
+            continue
         if heading.name not in ('h2','h3'):
             heading = heading.find_parent(['h2','h3']) or heading
         links = {}
